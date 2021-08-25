@@ -1,2 +1,7 @@
 # get-raster
-This just gets a raster (gridded) of data and does some basic manipulations.
+
+Just basics
+
+* Download some data and plot it.
+* Get a shapefile and plot it over the data
+* Do some basic geometric manipulations
