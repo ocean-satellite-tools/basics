@@ -194,12 +194,12 @@ make_buffer <- function(d = 300, units = "km", crs.to.use = "wintri", remove.hol
 get.nearest.buffer.pt <- function(pts, buff = buffer300.wintri$df, newcrs = buffer300.wintri$crs) {
   if (inherits(pts, "SpatialPoints")) pts <- pts@coords
   if (inherits(buff, "SpatialPolygon")) {
-    buff <- as(mworld, "SpatialLines")
+    buff <- as(buff, "SpatialLines")
   }
   if (inherits(buff, "SpatialLines")) {
     df <- c()
-    n <- length(el@lines[[1]]@Lines)
-    for (i in 1:n) df <- rbind(df, cbind(el@lines[[1]]@Lines[[i]]@coords, ID = i))
+    n <- length(buff@lines[[1]]@Lines)
+    for (i in 1:n) df <- rbind(df, cbind(buff@lines[[1]]@Lines[[i]]@coords, ID = i))
     buff <- df
   }
   close_pt <- maptools::nearestPointOnLine(df, pts)
