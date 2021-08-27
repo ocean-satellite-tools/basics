@@ -1,5 +1,7 @@
 # basics
 
+[Pkgdown site with the vignettes](https://ocean-satellite-tools.github.io/basics/) Look in the articles tab.
+
 Basic oceanographic data downloading and manipulations (for things the Eli needs to do)
 
 * Download some data and plot it.
