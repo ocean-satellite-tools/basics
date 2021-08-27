@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//index.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//reference/sample_raster.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/1_download_data.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/2_add_coastline.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/3_stamen_map.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/4_add_coast_buffer.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/5_offshore_points.html</loc>
+  </url>
+</urlset>

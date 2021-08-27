@@ -1,0 +1,26 @@
+url: https://uw-upwelling-project.github.io/imageryML/
+
+navbar:
+  structure:
+    left:
+    - home
+    - articles
+    right: github
+    
+reference:
+- title: Functions
+  desc: Functions to do stuff
+- contents:
+  - has_keyword("functions")
+- title: Data
+  desc: Data
+  contents:
+  - has_keyword("data")
+
+template:
+  params:
+    bootswatch: cosmo
+
+authors:
+  Eli Holmes:
+    href: http://eeholmes.github.io/

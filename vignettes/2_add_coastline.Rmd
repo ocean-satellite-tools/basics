@@ -1,0 +1,117 @@
+---
+title: "Add coastline"
+author: "EE Holmes"
+output: html_document
+---
+
+This example assumes that you have a sample raster. You can load the sample one or go to the download data vignette to download your own. `sample_raster` is a demo SST raster and data frame.
+
+Load the sample data.
+```{r}
+data("sample_raster", package="basics")
+df <- sample_raster$df
+ras <- sample_raster$raster
+lons <- sample_raster$lons
+lats <- sample_raster$lats
+```
+
+Load the needed packages for plotting.
+```{r}
+require(raster)
+require(ggplot2)
+```
+
+
+## Download a coastline
+
+There are a variety of places you can get a coastline.
+
+You can download via **raster**.
+```{r eval=FALSE}
+coast <- raster::getData("GADM", country = "USA", level = 1)
+wa_or_coast <- subset(usashp, NAME_1 %in% c("Washington", "Oregon"))
+```
+
+Or you could get it from **rnaturalearth** which is quite a bit faster. With scale=50, the coastline has some detail. You could pass in scale of 110 or 10.
+```{r}
+coast <- rnaturalearth::ne_coastline(scale = 50, returnclass = "sp")
+```
+
+## Crop and plot
+
+I'll use **rnaturalearth**. The coast just downloaded is for the whole world. We'll want to crop that down to our region. Note I need to use `library(raster)` so that I have access to the plot methods for spatial objects.
+```{r}
+library(raster)
+wa_or_coast <- raster::crop(coast, raster::extent(lons[1], lons[2], lats[1], lats[2]))
+plot(wa_or_coast)
+```
+
+
+## Add on raster with base R
+
+```{r}
+plot(ras)
+plot(wa_or_coast, add=TRUE)
+```
+
+We can plot with **ggplot2** also.
+```{r}
+require(ggplot2)
+# Plot
+gg <- ggplot(df) +
+  geom_raster(aes(lon, lat, fill = sst)) +
+  scale_fill_gradient2(midpoint = mean(df$sst, na.rm = TRUE),
+                       low = "blue",
+                       mid = "white",
+                       high = "red") +
+  labs(x = NULL,
+       y = NULL,
+       fill = "Celcius",
+       title = "Sea Surface Temperature (SST)")
+```
+
+The way that **ggplot2** works is to run `fortify()` on the SpatialLines object to create a data frame. Then we use `geom_path()` to plot that. But if you look at the coast, you see lots of islands. We need to tell `geom_path()` that there are these groups of paths in the data frame.
+```{r}
+gg <- gg + 
+  geom_path(data=wa_or_coast,  aes(x=long,y=lat, grouping=id), size=1, na.rm=TRUE)
+gg
+```
+
+## **cmocean** palette
+
+Let's use the **cmocean** package to use it's thermal palette.
+
+```{r}
+library(cmocean)
+gg + scale_fill_cmocean(alpha=1) + theme_bw()
+```
+
+We can use this for our raster plot too.
+```{r}
+plot(ras, col = cmocean("thermal")(100))
+```
+
+
+## Add a line parallel to the coastline
+
+```{r}
+coast110 <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sp")
+coast110 <- raster::crop(coast110, raster::extent(lons[1], lons[2], lats[1], lats[2]))
+offcoast <- raster::shift(coast110, dx=-2)
+```
+
+```{r}
+plot(ras)
+plot(wa_or_coast, add=TRUE)
+plot(offcoast, add=TRUE, col="red")
+```
+
+
+The default raster plot is a bit deformed since it is long-lat on the x and y axis. We can see what it would look like in a different projection.
+```{r}
+newcrs <- "+proj=wintri +lon_0=-125 +lat_1=46 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+ras_win <- projectRaster(ras, crs=newcrs, over=T)
+plot(ras_win)
+plot(spTransform(wa_or_coast, newcrs), add=TRUE)
+title(stringr::str_sub(newcrs, 1, 10))
+```

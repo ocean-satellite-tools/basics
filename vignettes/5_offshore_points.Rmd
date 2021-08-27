@@ -1,0 +1,240 @@
+---
+title: "Create offshore points"
+author: "EE Holmes"
+output: html_document
+---
+
+This example shows how to select the nearest point that is some distance offshore and then compute some statistics for that point.
+
+Load the sample data.
+```{r}
+data("sample_raster", package = "basics")
+df <- sample_raster$df
+ras <- sample_raster$raster
+lons <- sample_raster$lons
+lats <- sample_raster$lats
+```
+
+Load the needed packages for plotting.
+```{r}
+require(raster)
+require(ggplot2)
+```
+
+## Preliminaries
+
+### Download the world coastline
+
+```{r}
+world <- rnaturalearth::ne_countries(scale = "small", returnclass = "sp")
+world <- rgeos::gUnaryUnion(world)
+```
+
+### Set up our projection in meters
+
+Create some transformed versions of objects we use a bit.
+```{r}
+newcrs <- "+proj=wintri +lon_0=0 +lat_1=0 +x_0=0 +y_0=0 +datum=WGS84 +units=km +no_defs"
+mworld <- sp::spTransform(world, newcrs)
+mras <- raster::projectRaster(ras, crs = newcrs, over = TRUE)
+mpts <- sp::SpatialPoints(cbind(lons, lats), proj4string = sp::CRS("+proj=longlat"))
+mpts <- sp::spTransform(mpts, newcrs)
+```
+
+### Create a line around the world's coastlines at 300 km offshore
+
+```{r}
+buff1 <- rgeos::gBuffer(mworld, width = 300, byid = TRUE)
+e <- raster::erase(buff1, mworld)
+plot(e)
+```
+
+We want just the outer part of this polygon. We will use the `remove.holes()` function from **spatialEco**.
+```{r}
+e300 <- spatialEco::remove.holes(spatialEco::remove.holes(e))
+plot(e300)
+```
+
+We can add the world to this and see that it is just the coastline area. We have lost some interior coastlines like Gulf of Mexico.
+```{r}
+plot(e300)
+plot(mworld, add = TRUE, col = "grey")
+```
+
+## Find closest point
+
+```{r}
+el <- as(mworld, "SpatialLines")
+el <- raster::crop(el, mpts@bbox)
+set.seed(123)
+pts <- sp::spsample(el, n = 1, type = "regular")
+```
+
+We want to find the point on the coastline that is closest to this 300m offshore line.
+```{r}
+plot(e300, border = "red", axes = TRUE, xlim = mpts@bbox[1, ], ylim = mpts@bbox[2, ])
+plot(mworld, add = TRUE, col = "grey")
+plot(pts, add = TRUE, pch = 19)
+```
+
+
+## Finding the closest point
+
+The `snapPointsToLines()` function in **maptools** should work, but does not seem to handle the types of SpatialLines objects that are returned when we convert our 300 km polygon into lines.
+
+```{r}
+el300 <- as(e300, "SpatialLines")
+close_pt <- maptools::snapPointsToLines(pts, el300, maxDist = 500)
+plot(mworld)
+plot(close_pt, add = TRUE, pch = 19, col = "red")
+plot(pts, add = TRUE, pch = 19)
+```
+
+So we need to use a more brute force method. 
+
+* Convert our 300km polygon to SpatialLines
+* Make the SpatialLines object into a dataframe
+* Pass that to `maptools::nearestPointOnLine()`
+* Make back into SpatialPoints object for plotting
+
+```{r}
+el300 <- as(e300, "SpatialLines")
+df <- c()
+n <- length(el300@lines[[1]]@Lines)
+for (i in 1:n) {
+  df <- rbind(df, cbind(el300@lines[[1]]@Lines[[i]]@coords, ID = i))
+}
+close_pt <- maptools::nearestPointOnLine(df, pts@coords)
+close_pt <- sp::SpatialPoints(matrix(close_pt, ncol = 2), proj4string = CRS(newcrs))
+```
+
+````{r}
+plot(e300, border = "red", axes = TRUE, xlim = mpts@bbox[1, ], ylim = mpts@bbox[2, ])
+plot(mworld, add = TRUE, col = "grey")
+plot(pts, add = TRUE, pch = 19)
+plot(close_pt, add = TRUE, pch = 1)
+```
+
+## Compute statistics associated with the point
+
+We want to compute some statistics associated with the offshore point.
+```{r}
+plot(mras, axes = TRUE, xlim = bbox(mras)[1, ], ylim = bbox(mras)[2, ])
+plot(e300, border = "red", add = TRUE)
+plot(mworld, add = TRUE, col = "grey")
+plot(pts, add = TRUE, pch = 19)
+plot(close_pt, add = TRUE, pch = 1)
+```
+
+Get the SST at that point.
+```{r}
+raster::extract(mras, close_pt)
+```
+
+
+Get the mean SST in a 100km circle around that point. For this we need to make a circle polygon around the point.
+```{r}
+circle_pt <- raster::buffer(close_pt, width = 100)
+```
+
+```{r echo=FALSE}
+plot(mras, axes = TRUE, xlim = bbox(mras)[1, ], ylim = bbox(mras)[2, ])
+plot(e300, border = "red", add = TRUE)
+plot(mworld, add = TRUE, col = "grey")
+plot(pts, add = TRUE, pch = 19)
+plot(close_pt, add = TRUE, pch = 19, col = "red")
+plot(circle_pt, add = TRUE)
+```
+We use `raster::extract()` again.
+```{r}
+vals <- raster::extract(mras, circle_pt)[[1]]
+vals
+```
+and we take the mean.
+```{r}
+mean(vals, na.rm = TRUE)
+```
+
+## Save the objects
+
+```{r eval=FALSE}
+crs.wintri <- newcrs
+save(crs.wintri, file = file.path(here::here(), "data/crs_wintri.rda"))
+world.wintri <- mworld
+save(world.wintri, file = file.path(here::here(), "data/world_wintri.rda"))
+save(world, file = file.path(here::here(), "data/world.rda"))
+buffer300.wintri <- list(line = el300, polygon = e300, df = df, crs = newcrs)
+save(buffer300.wintri, file = file.path(here::here(), "data/buffer300_wintri.rda"))
+```
+
+## Make a function
+
+```{r}
+# Make a buffer and return in various formats
+make_buffer <- function(d = 300, units = "km", crs.to.use = "wintri", remove.holes = TRUE) {
+  world <- rnaturalearth::ne_countries(scale = "small", returnclass = "sp")
+  world <- rgeos::gUnaryUnion(world)
+  newcrs <- paste0("+proj=", crs.to.use, " +lon_0=0 +lat_1=0 +x_0=0 +y_0=0 +datum=WGS84 +units=", units, " +no_defs")
+  mworld <- sp::spTransform(world, newcrs)
+  buff1 <- rgeos::gBuffer(mworld, width = d, byid = TRUE)
+  e <- raster::erase(buff1, mworld)
+  if (remove.holes) e <- spatialEco::remove.holes(spatialEco::remove.holes(e))
+  el <- as(mworld, "SpatialLines")
+  df <- c()
+  n <- length(el@lines[[1]]@Lines)
+  for (i in 1:n) {
+    df <- rbind(df, cbind(el@lines[[1]]@Lines[[i]]@coords, ID = i))
+  }
+  return(list(polygon = e, line = el, df = df, crs = newcrs))
+}
+```
+
+```{r}
+# Find the nearest point to the buffer
+get.nearest.buffer.pt <- function(pts, buff = buffer300.wintri$df, newcrs = buffer300.wintri$crs) {
+  if (inherits(pts, "SpatialPoints")) pts <- pts@coords
+  if (inherits(buff, "SpatialPolygon")) {
+    buff <- as(mworld, "SpatialLines")
+  }
+  if (inherits(buff, "SpatialLines")) {
+    df <- c()
+    n <- length(el@lines[[1]]@Lines)
+    for (i in 1:n) df <- rbind(df, cbind(el@lines[[1]]@Lines[[i]]@coords, ID = i))
+    buff <- df
+  }
+  close_pt <- maptools::nearestPointOnLine(df, pts)
+  close_pt <- sp::SpatialPoints(matrix(close_pt, ncol = 2), proj4string = CRS(newcrs))
+  return(close_pt)
+}
+```
+
+```{r}
+# Get the mean raster values around a point
+get.mean.around.pt <- function(pts, ras, d = 100, units = "km", newcrs = crs.wintri, fun = "mean") {
+  if (!inherits(pts, "SpatialPoints")) stop("pts shoudl be a SpatialPoints object")
+  if (!inherits(ras, "raster")) stop("ras should be a raster")
+  mpts <- pts
+  if (!identical(crs(pts), newcrs)) mpts <- sp::spTransform(mpts, newcrs)
+  mras <- ras
+  if (!identical(crs(ras), newcrs)) mras <- raster::projectRaster(ras, crs = newcrs, over = TRUE)
+  circle_pt <- raster::buffer(pts, width = d)
+  vals <- raster::extract(mras, circle_pt)
+  val <- c()
+  for (i in 1:length(vals)) val <- c(val, do.call(fun, vals[[i]], na.rm = TRUE))
+  return(val)
+}
+```
+
+```{r}
+# Get the mean raster values around a point
+get.mean.at.pt <- function(pts, ras, d = 100, units = "km", newcrs = crs.wintri, fun = "mean") {
+  if (!inherits(pts, "SpatialPoints")) stop("pts shoudl be a SpatialPoints object")
+  if (!inherits(ras, "raster")) stop("ras should be a raster")
+  mpts <- pts
+  if (!identical(crs(pts), newcrs)) mpts <- sp::spTransform(mpts, newcrs)
+  mras <- ras
+  if (!identical(crs(ras), newcrs)) mras <- raster::projectRaster(ras, crs = newcrs, over = TRUE)
+  val <- raster::extract(mras, pts)
+  return(val)
+}
+```

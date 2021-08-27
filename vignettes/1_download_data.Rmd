@@ -1,0 +1,103 @@
+---
+title: "Download data"
+author: "EE Holmes"
+output: html_document
+---
+
+# Download data from an ERDDAP server
+
+This will download data from the CoastWatch ERDDAP server. Alter the URL to download from a different ERDDAP server or data set.
+
+## Use rerddap
+
+```
+require(devtools)
+devtools::install_github("ropensci/rerddap")
+devtools::install_github("rmendels/rerddapXtracto") 
+```
+
+Specify where to save the downloaded data. Data from a `griddap()` call can be verbose, so you'll probably want a folder for it.
+```{r create_dir}
+fil_dir <- file.path(here::here(), "inst", "extdata")
+if(!dir.exists(fil_dir)) dir.create(fil_dir)
+```
+
+We will download SST data from CoastWatch.  [Here](https://coastwatch.pfeg.noaa.gov/erddap/griddap/ncdcOisst21Agg_LonPM180.html) is the data access page for that dataset.
+```{r}
+lats <- c(40.375, 50.375)
+lons <- c(-141.875, -120.875)
+df_info <- rerddap::info("ncdcOisst21Agg_LonPM180")
+df <- rerddap::griddap("ncdcOisst21Agg_LonPM180", latitude = lats, longitude = lons, time = c("2021-06-19", "2021-06-19"), fields = "sst")$data
+```
+
+`df` is a data frame with lat and lon.
+```{r}
+head(df)
+```
+
+There is [no projection information](https://coastwatch.pfeg.noaa.gov/erddap/info/ncdcOisst21Agg_LonPM180/index.html) for these data, but the meta data just says that it is on a uniform lat-lon grid. That tells us that at minimum it is `"+proj=longlat"`. It is important to include this information so that we can combine this with other map data later.
+
+## Turn this into a raster
+
+We can then turn this matrix into a raster using the **raster** package and the `rasterFromXYZ()` function. 
+```{r}
+df2 <- data.frame(x=df$lon, y=df$lat, z=df$sst)
+ras <- raster::rasterFromXYZ(df2, crs = "+proj=longlat")
+```
+
+## Plot the raster
+
+We can do this with the **raster** package.
+```{r}
+library(raster)
+plot(ras)
+```
+We can use the **cmocean** package and use its thermal palette.
+```{r}
+plot(ras, col = cmocean::cmocean("thermal")(100))
+```
+
+We can plot with **ggplot2** also.
+```{r}
+require(ggplot2)
+# Plot
+gg <- ggplot(df) +
+  geom_raster(aes(lon, lat, fill = sst)) +
+  scale_fill_gradient2(midpoint = mean(df$sst, na.rm = TRUE),
+                       low = "blue",
+                       mid = "white",
+                       high = "red") +
+  labs(x = NULL,
+       y = NULL,
+       fill = "Celcius",
+       title = "Sea Surface Temperature (SST)")
+gg
+```
+
+It's a bit ugly. We might futz with the look and use the **cmocean** palette.
+```{r}
+gg + theme_bw() +
+  scale_x_continuous(limits = lons, expand = c(-0.01, -0.01)) +
+  scale_y_continuous(limits = lats, expand = c(-0.01, -0.01)) +
+  cmocean::scale_fill_cmocean(alpha=1) + theme_bw()
+```
+
+The default raster plot is a bit deformed since it is long-lat on the x and y axis. We can see what it would look like in a different projection.
+
+```{r}
+newcrs <- "+proj=wintri +lon_0=-125 +lat_1=46 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+ras_proj<- projectRaster(ras, crs=newcrs, over=TRUE)
+plot(ras_proj)
+title(stringr::str_sub(newcrs, 1, 12))
+```
+
+## Save
+
+We'll save this to use later. You'll want to change the `data_dir` to wherever you are saving your data. I am saving the data in different forms since in the examples to follow, different forms will be used.
+```{r eval=FALSE}
+data_dir <- file.path(here::here(), "data", "sample_raster.rda")
+sample_raster <- list(df=df, raster=ras, lats=lats, lons=lons)
+save(sample_raster, file=data_dir)
+```
+
+

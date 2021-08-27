@@ -1,0 +1,32 @@
+Package: basics
+Title: Some very basic raster manipulations
+Version: 1.0
+Authors@R: 
+    c(person(given = "Eli",
+           family = "Holmes",
+           role = c("aut", "cre"),
+           email = "eli.holmes@noaa.gov")
+           )
+Description: Various functions for downloading data, processing raster images, and running machine learning algorithms on images.
+Depends: graphics, grDevices, ggplot2
+Imports: 
+  here,
+  stringr,
+  magrittr,
+  tidyr,
+  tidyselect,
+  raster,
+  grid,
+  colorRamps,
+  RColorBrewer,
+  dendextend,
+  utils
+Suggests: fpc, lubridate, tidyverse, scales, factoextra, png, gridExtra, DescTools, tmap
+License: AGPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+URL: https://github.com/ocean-satellite-tools/basics
+BugReports: https://github.com/ocean-satellite-tools/basics/issues
+
