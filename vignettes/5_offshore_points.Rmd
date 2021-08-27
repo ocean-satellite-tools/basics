@@ -43,6 +43,7 @@ mpts <- sp::spTransform(mpts, newcrs)
 
 ### Create a line around the world's coastlines at 300 km offshore
 
+See comments in the **add_coast_buffer** vignette about why `rgeos::gBuffer()` must be used and not `raster::buffer()`.
 ```{r}
 buff1 <- rgeos::gBuffer(mworld, width = 300, byid = TRUE)
 e <- raster::erase(buff1, mworld)
@@ -226,8 +227,8 @@ get.mean.around.pt <- function(pts, ras, d = 100, units = "km", newcrs = crs.win
 ```
 
 ```{r}
-# Get the mean raster values around a point
-get.mean.at.pt <- function(pts, ras, d = 100, units = "km", newcrs = crs.wintri, fun = "mean") {
+# Get the mean raster values at a point
+get.mean.at.pt <- function(pts, ras, newcrs = crs.wintri) {
   if (!inherits(pts, "SpatialPoints")) stop("pts shoudl be a SpatialPoints object")
   if (!inherits(ras, "raster")) stop("ras should be a raster")
   mpts <- pts

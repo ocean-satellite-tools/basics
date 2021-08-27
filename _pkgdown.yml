@@ -8,10 +8,16 @@ navbar:
     right: github
     
 reference:
-- title: Functions
-  desc: Functions to do stuff
+- title: Clustering
+  desc: Functions that do clustering or plots
 - contents:
-  - has_keyword("functions")
+  - has_keyword("clustering")
+- title: Plotting utilities
+- contents:
+  - has_keyword("plotting")
+- title: Image utilities
+- contents:
+  - has_keyword("image")
 - title: Data
   desc: Data
   contents:
