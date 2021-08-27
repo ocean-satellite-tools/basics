@@ -14,4 +14,5 @@ Other examples
 * https://www.molecularecologist.com/2015/07/03/marmap/
 * https://cloud.r-project.org/web/packages/oce/oce.pdf
 * https://r-spatial.org/r/2018/10/25/ggplot2-sf.html
+* https://geocompr.robinlovelace.net/
 
