@@ -7,22 +7,6 @@ navbar:
     - articles
     right: github
     
-reference:
-- title: Clustering
-  desc: Functions that do clustering or plots
-- contents:
-  - has_keyword("clustering")
-- title: Plotting utilities
-- contents:
-  - has_keyword("plotting")
-- title: Image utilities
-- contents:
-  - has_keyword("image")
-- title: Data
-  desc: Data
-  contents:
-  - has_keyword("data")
-
 template:
   params:
     bootswatch: cosmo
