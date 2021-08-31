@@ -1,8 +1,14 @@
 ---
-title: "Add coastline"
-author: "EE Holmes"
-output: html_document
+title: "2 - Coastline"
+author: "Eli Holmes"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{2 - Coastline}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
+
 
 This example assumes that you have a sample raster. You can load the sample one or go to the download data vignette to download your own. `sample_raster` is a demo SST raster and data frame.
 

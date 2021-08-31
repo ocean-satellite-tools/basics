@@ -1,7 +1,12 @@
 ---
-title: "Download data"
-author: "EE Holmes"
-output: html_document
+title: "1 - Download Data"
+author: "Eli Holmes"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{1 - Download Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 # Download data from an ERDDAP server

@@ -1,7 +1,7 @@
 #' Sample Raster
 #' 
 #' @description
-#' A sample raster to use in the examples
+#' A sample raster to use in the examples. A version of the raster in Winkel Tripel projection is also included.
 #' 
 #' @details
 #' Produced by this code

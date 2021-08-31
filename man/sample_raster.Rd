@@ -5,13 +5,13 @@
 \alias{sample_raster}
 \title{Sample Raster}
 \format{
-An object of class \code{list} of length 4.
+An object of class \code{list} of length 8.
 }
 \usage{
 sample_raster
 }
 \description{
-A sample raster to use in the examples
+A sample raster to use in the examples. A version of the raster in Winkel Tripel projection is also included.
 }
 \details{
 Produced by this code\preformatted{lats <- c(40.375, 50.375)

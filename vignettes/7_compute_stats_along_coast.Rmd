@@ -1,0 +1,64 @@
+---
+title: "7 - Compute Stats"
+author: "Eli Holmes"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{7 - Compute Stats}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This example shows how work through the points along the 20km coastline and return the stats for each point.
+
+The **basics** package our coastline, coastal sample points and the offshore 300km line.
+```{r}
+data(package = "basics")
+```
+
+Load the needed packages for plotting.
+```{r}
+require(raster)
+require(ggplot2)
+```
+
+## Make a function to get the nearest points on the 300 km line
+
+We need to pass it our 300 km line as a data frame (long, lat, ID) along with the long-lat of a point on the coast. We need to tell it our 
+
+```{r}
+# l is SpatialLines for 300 km line
+# p is SpatialPoints of coastal point
+NearestPoints <- function(l, p) {
+  df <- c()
+  n <- length(l@lines[[1]]@Lines)
+  for (i in 1:n) {
+    df <- rbind(df, cbind(l@lines[[1]]@Lines[[i]]@coords, ID = i))
+  }
+  pts <- p@coords
+  close_coords <- matrix(NA, nrow(pts), 2)
+  for (i in 1:nrow(pts)) {
+    close_coords[i, ] <- maptools::nearestPointOnLine(df, pts[i, ])
+  }
+  close_sp <- sp::SpatialPoints(close_coords, proj4string = CRS(crs(l)))
+  return(list(coords = close_coords, sp = close_sp))
+}
+```
+
+## Make a function to get the average SST for these 300 km points
+
+```{r}
+# p is SpatialPoints of coastal point
+# d is the distance (in whatever units p is in)
+AverageSST <- function(r, p, d = 100) {
+  circle_pt <- raster::buffer(p, width = d)
+  vals <- raster::extract(r, circle_pt)[[1]]
+  return(vals)
+}
+```
+
+## Now we can apply this to a set of points in our area of interest (WA/OR)
+
+```{r}
+thepts <- raster::crop(sample_points$km100, raster::bbox(sample_raster$raster.wintri))
+```

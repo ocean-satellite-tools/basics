@@ -1,7 +1,12 @@
 ---
-title: "Create offshore points"
-author: "EE Holmes"
-output: html_document
+title: "6 - Find Offshore Nearest Point"
+author: "Eli Holmes"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{6 - Find Offshore Nearest Point}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 This example shows how to select the nearest point that is some distance offshore and then compute some statistics for that point.
