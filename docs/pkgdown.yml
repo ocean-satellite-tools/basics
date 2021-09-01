@@ -2,13 +2,15 @@ pandoc: 2.11.2
 pkgdown: 1.6.1
 pkgdown_sha: ~
 articles:
+  10_save_data: 10_save_data.html
   1_download_data: 1_download_data.html
   2_add_coastline: 2_add_coastline.html
   3_stamen_map: 3_stamen_map.html
   4_add_coast_buffer: 4_add_coast_buffer.html
   5_add_line_parallel_to_coast: 5_add_line_parallel_to_coast.html
   6_offshore_points: 6_offshore_points.html
-last_built: 2021-08-28T02:35Z
+  7_compute_stats_along_coast: 7_compute_stats_along_coast.html
+last_built: 2021-08-31T21:28Z
 urls:
   reference: https://uw-upwelling-project.github.io/imageryML//reference
   article: https://uw-upwelling-project.github.io/imageryML//articles

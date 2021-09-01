@@ -4,7 +4,13 @@
     <loc>https://uw-upwelling-project.github.io/imageryML//index.html</loc>
   </url>
   <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//reference/buffers.html</loc>
+  </url>
+  <url>
     <loc>https://uw-upwelling-project.github.io/imageryML//reference/sample_raster.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/10_save_data.html</loc>
   </url>
   <url>
     <loc>https://uw-upwelling-project.github.io/imageryML//articles/1_download_data.html</loc>
@@ -23,5 +29,8 @@
   </url>
   <url>
     <loc>https://uw-upwelling-project.github.io/imageryML//articles/6_offshore_points.html</loc>
+  </url>
+  <url>
+    <loc>https://uw-upwelling-project.github.io/imageryML//articles/7_compute_stats_along_coast.html</loc>
   </url>
 </urlset>

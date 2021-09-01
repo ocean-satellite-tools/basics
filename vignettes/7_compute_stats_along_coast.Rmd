@@ -16,20 +16,23 @@ The **basics** package our coastline, coastal sample points and the offshore 300
 data(package = "basics")
 ```
 
-Load the needed packages for plotting.
+Load the needed packages for plotting and data.
 ```{r}
 require(raster)
 require(ggplot2)
+require(basics) # the data
 ```
 
 ## Make a function to get the nearest points on the 300 km line
 
-We need to pass it our 300 km line as a data frame (long, lat, ID) along with the long-lat of a point on the coast. We need to tell it our 
+We need to pass it our 300 km line as a data frame (long, lat, ID) along with the long-lat of a point on the coast. Little bumps in the coast and 300km lines cause the nearest points to be clustered around dips toward the coast. Simplifing the line helps prevent this. A `tol` about 50 seems to work. `na.rm` determines if NA are ignored or not.
 
 ```{r}
 # l is SpatialLines for 300 km line
 # p is SpatialPoints of coastal point
-NearestPoints <- function(l, p) {
+NearestPoints <- function(l, p, tol=1) {
+  #if(!is.null(tol)) l <- rgeos::gSimplify(l, tol=tol)
+  if(tol!=0) l <- smoothr::smooth(l, method="ksmooth", smoothness=5)
   df <- c()
   n <- length(l@lines[[1]]@Lines)
   for (i in 1:n) {
@@ -40,25 +43,106 @@ NearestPoints <- function(l, p) {
   for (i in 1:nrow(pts)) {
     close_coords[i, ] <- maptools::nearestPointOnLine(df, pts[i, ])
   }
-  close_sp <- sp::SpatialPoints(close_coords, proj4string = CRS(crs(l)))
+  close_sp <- sp::SpatialPoints(close_coords, proj4string = crs(l))
   return(list(coords = close_coords, sp = close_sp))
 }
 ```
 
 ## Make a function to get the average SST for these 300 km points
 
+Because the raster might include islands, which would be NA, setting `na.rm=FALSE` means coastal points that are inside of an island will be NA.
+
 ```{r}
-# p is SpatialPoints of coastal point
+# p is SpatialPoints the coastal points
 # d is the distance (in whatever units p is in)
-AverageSST <- function(r, p, d = 100) {
-  circle_pt <- raster::buffer(p, width = d)
-  vals <- raster::extract(r, circle_pt)[[1]]
+SST.offshore <- function(r, p, d = 100, na.rm=FALSE) {
+  if(d==0){ # Get value at points
+  vals <- raster::extract(r, p)
+  return(vals)
+  }
+  # Get values in circle around points
+  pts <- p@coords
+  vals <- c()
+  for(i in 1:nrow(pts)){
+    pt <- sp::SpatialPoints(pts[i,,drop=FALSE])
+    circle_pt <- raster::buffer(pt, width = d)
+    vals <- c(vals, mean(raster::extract(r, circle_pt)[[1]], na.rm=na.rm))
+  }
   return(vals)
 }
 ```
 
+## Make a function to get the SST for the coastal points
+
+If `d=0` then it just returns the SST at the point. If `d` is not zero, it takes the average along `l` that is `d` to each side of the points.
+
+```{r}
+SST.coast <- function(r, p, l=NULL, d=0) {
+  if(d==0){
+  vals <- raster::extract(r, p)
+  return(vals)
+  }
+  if(is.null(l)) stop("If d is not zero, need the coastline.")
+  pts <- p@coords
+  vals <- c()
+  for(i in 1:nrow(pts)){
+    pt <- sp::SpatialPoints(pts[i,,drop=FALSE])
+    circle_pt <- raster::buffer(pt, width = d)
+    segment_pt <- raster::intersect(l, circle_pt)
+    vals <- c(vals, mean(raster::extract(r, segment_pt)[[1]], na.rm=TRUE))
+  }
+  return(vals)
+}
+```
+
+```{r}
+upwelling <- function(r, p, l.offshore, l.coast=NULL, d.offshore=100, d.coast=0, threshold=2.5, tol=NULL){
+  coast.pts <- p
+  offshore.pts <- NearestPoints(l.offshore, coast.pts, tol=tol)$sp
+  off.sst <- SST.offshore(r, offshore.pts, d = d.offshore)
+  coast.sst <- SST.coast(r, p, l=l.coast, d=d.coast)
+  df <- data.frame(p@coords, offshore=off.sst, coast=coast.sst, 
+                   upwelling=(off.sst-coast.sst)>=threshold)
+  colnames(df) <- c("longitude", "latitude", "offshore.SST", "coast.SST", "upwelling")
+  return(list(df=df, offshore.pts=offshore.pts, tol=tol, threshold=threshold, d.offshore=d.offshore, d.coast=d.coast))
+}
+```
+
+
 ## Now we can apply this to a set of points in our area of interest (WA/OR)
 
 ```{r}
-thepts <- raster::crop(sample_points$km100, raster::bbox(sample_raster$raster.wintri))
+coast.pts <- raster::crop(sample_points$km100, 
+                       raster::bbox(raster::trim(sample_raster$raster.wintri)))
 ```
+
+```{r}
+out <- upwelling(sample_raster$raster.wintri, coast.pts, 
+                 buffer300$wintri$line, d.offshore=50, 
+                 d.coast=50, l.coast=buffer20$wintri$line, tol=30)
+out$df
+```
+
+```{r}
+coast.pts <- raster::crop(sample_points$km100, 
+                       raster::bbox(raster::trim(sample_raster$raster.wintri)))
+out2 <- upwelling(sample_raster$raster.wintri, coast.pts, 
+                 raster::crop(buffer300$wintri$line, raster::bbox(sample_raster$raster.wintri)), d.offshore=100, tol=50)
+out2$df
+```
+```{r include=FALSE}
+figcap <- paste("Coast points and corresponding offshore points.", 
+                ifelse(!is.null(out$tol), paste("tol =", out$tol, "Offshore line is smoothed so points won't fall on line."), "Offshore line is not smoothed."), "The average SST in a circle of radius", out$d.offshore, "was used.")
+```
+```{r fig.cap=figcap}
+plot(sample_raster$raster.wintri)
+plot(buffer300$wintri$line, add=TRUE)
+plot(buffer20$wintri$line, add=TRUE)
+cols <- ifelse(out$df$upwelling, "red", "black")
+cols[is.na(cols)] <- "grey"
+plot(coast.pts, add=TRUE, pch=19, col=cols)
+plot(out$offshore.pts, add=TRUE, pch=1)
+title("coast points and corresponding offshore points")
+```
+
+
